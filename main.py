@@ -4,17 +4,9 @@ import twophase.solver as sv
 
 #print(sv.solve(cubestring="DULDULDDLFUBDRFBBRRRDDFBURLFUURDLRBUFLBLLFBBLDFRRBFFUU"))
 
-cc = sv.cubie.CubieCube()
-cc.randomize()
-fc = cc.to_facelet_cube()
-begin_string = fc.to_string()
-print(begin_string)
-
-rotate_string = sv.solve(begin_string)
-print(rotate_string)
-# rotate_string = sv.solve("UBULURUFURURFRBRDRFUFLFRFDFDFDLDRDBDLULBLFLDLBUBRBLBDB")
-
-rotate_dict = {
+class RubiksCube:
+    def __init__(self):
+        self.rotate_dict = {
             'U': 'TOP',
             'D': 'BOTTOM',
             'F': 'FACE',
@@ -22,44 +14,67 @@ rotate_dict = {
             'L': 'LEFT',
             'R': 'RIGHT'
         }
+        self.begin_rotation_string = self.generate_cube()
+        self.solve_rotation_string = self.solve_cube(self.begin_rotation_string)
+        self.solve_rotation_dict = self.string_to_dict(self.solve_rotation_string)
+        self.reverse_rotation_dict = self.reverse_rotate_dict(self.solve_rotation_dict)
+        self.count_rotation = len(self.solve_rotation_dict)
+        self.current_solve_rotation_dict = self.solve_rotation_dict
 
-def string_to_dict(rotate_string):
-        # Разбиваем строку на список элементов по пробелам
+    def print(self):
+        print(self.begin_rotation_string)
+        print(self.solve_rotation_string)
+        print(self.solve_rotation_dict)
+        print(self.reverse_rotation_dict)
+        print(self.count_rotation)
+
+
+    def string_to_dict(self, rotate_string):
         elements = rotate_string.split()
         elements.pop()
-        # Создаем словарь
         list = []
         for element in elements:
-            # Разбиваем каждый элемент на букву и число
             letter, number = element[0], int(element[1:])
             list.append([letter, number])
         return list
-rotate_list = string_to_dict(rotate_string)
-print(rotate_list)
 
-def func_reverse_rotate_list(pairs):
-    revesed_pairs = []
-    for pair in pairs:
-        revesed_pairs.append([pair[0], (4-int(pair[1]))])
-    return revesed_pairs[::-1]
+    def reverse_rotate_dict(self, pairs):
+        revesed_pairs = []
+        for pair in pairs:
+            revesed_pairs.append([pair[0], (4-int(pair[1]))])
+        return revesed_pairs[::-1]
 
-reverse_rotate_list = func_reverse_rotate_list(rotate_list)
+    def generate_cube(self):
+        cc = sv.cubie.CubieCube()
+        cc.randomize()
+        fc = cc.to_facelet_cube()
+        begin_string = fc.to_string()
+        return begin_string
 
-print(reverse_rotate_list)
+    def solve_cube(self, begin_string):
+        solve_rotation_string = sv.solve(begin_string)
+        return solve_rotation_string
+    
+cube = RubiksCube()
+cube.print()
+
 
 class Game(Ursina):
     def __init__(self):
         super().__init__()
         window.fullscreen = False
-        Entity(model='quad', scale=60, texture='white_cube', texture_scale=(60, 60), rotation_x=90, y=-5,
+        cube_model = Entity(model='quad', scale=60, texture='white_cube', texture_scale=(60, 60), rotation_x=90, y=-5,
                color=color.light_gray)  # plane
         Entity(model='sphere', scale=100, texture='textures/sky0', double_sided=True)  # sky
         EditorCamera()
         camera.world_position = (0, 0, -15)
+        # camera.look_at(cube_model)
+        # camera.look_at(Entity.position)
         self.model, self.texture = 'models/custom_cube', 'textures/rubik_texture'
         self.load_game()
-        self.message = Text(text=rotate_string, origin=(0, 19), color=color.black, scale = 2, position= (0, 1.3))
-        self.ctrl_pressed = False
+        self.message = Text(text=(str(cube.solve_rotation_dict[0][0])+str(cube.solve_rotation_dict[0][1])), origin=(0, 19), color=color.black, scale = 2, position= (0, 1.3))
+        self.solve_text = Text(text=("для сборки " + cube.solve_rotation_string), origin=(0, 19), color=color.black, scale = 1, position= (0, 0.001))
+        self.current_solve_text = Text(text=("текущее " + cube.solve_rotation_string), origin=(0, 19), color=color.black, scale = 0.8, position= (0, 0.005))
 
     def load_game(self):
         self.create_cube_positions()
@@ -75,8 +90,8 @@ class Game(Ursina):
         self.toggle_game_mode()
         # self.create_sensors()
         #self.random_state(rotations=20) # initial state of the cube, rotations - number of side turns
-        self.rotate_cube_without_animation(pairs=reverse_rotate_list)
-        # self.rotate_cube_without_animation(pairs=rotate_list)
+        self.rotate_cube_without_animation(pairs=cube.reverse_rotation_dict)
+        # self.rotate_cube(pairs=cube.reverse_rotation_dict)
         #self.rotate_cube(pairs=rotate_list)
         # self.random_state_animation(rotations=10) # initial state of the cube, rotations - number of side turns
 
@@ -170,8 +185,9 @@ class Game(Ursina):
         self.TOP = {Vec3(x, 1, z) for x in range(-1, 2) for z in range(-1, 2)}
         self.SIDE_POSITIONS = self.LEFT | self.BOTTOM | self.FACE | self.BACK | self.RIGHT | self.TOP
 
-    def input(self, key):
-        test_rotate_list = rotate_list
+    def input(self, key, is_raw=False):
+        # self.message.text1
+        # cube.current_solve_rotation_dict = cube.current_solve_rotation_dict
         keys_list = ['u', 'd', 'f', 'b', 'l', 'r', 'control-u', 'control-d', 'control-f', 'control-b', 'control-l', 'control-r']
         if key in keys_list and self.action_mode and self.action_trigger:
             # Определите соответствие между клавишами и сторонами куба
@@ -195,33 +211,48 @@ class Game(Ursina):
             elif side_name:
                 self.rotate_side(side_name)
                 # self.rotate_side_without_animation(side_name)
-            if key.upper() in test_rotate_list[0][0]:
-                test_rotate_list[0][1] = test_rotate_list[0][1] - 1
-                if test_rotate_list[0][1] == 0:
-                    test_rotate_list.pop(0)
-                if test_rotate_list:
-                    self.message.text = str(test_rotate_list[0])
+            if key.upper()[len(key)-1] in cube.current_solve_rotation_dict[0][0]:
+                if "control" in key:
+                    cube.current_solve_rotation_dict[0][1] = (cube.current_solve_rotation_dict[0][1] - 3) % 4
+                else:
+                    cube.current_solve_rotation_dict[0][1] = cube.current_solve_rotation_dict[0][1] - 1
+
+                if cube.current_solve_rotation_dict[0][1] == 0:
+                    cube.current_solve_rotation_dict.pop(0)
+                if cube.current_solve_rotation_dict:
+                    self.message.text = str(str(cube.current_solve_rotation_dict[0][0])+str(cube.current_solve_rotation_dict[0][1]))
                 else:
                     self.message.text = "OK"
             else:
-                test_rotate_list.insert(0, [key.upper(), 3])
-                self.message.text = str(test_rotate_list[0])
+                if "control" in key:
+                    cube.current_solve_rotation_dict.insert(0, [key.upper()[len(key)-1], 1])
+                else:
+                    cube.current_solve_rotation_dict.insert(0, [key.upper(), 3])
+                self.message.text = str(str(cube.current_solve_rotation_dict[0][0])+str(cube.current_solve_rotation_dict[0][1]))
+        self.current_solve_text.text = "текущее: " + str(cube.current_solve_rotation_dict)
                 
 
 
         if key == 'space': # Пример использования пробела для переключения режима
             self.toggle_game_mode()
+        # if key == 's':
+        #     self.rotate_cube_without_animation(current_rotation_list)
+        #     current_rotation_list = []
+        # if key == 'v':
+        #     # print(camera.get_position())
+        #     self.random_state_animation()
+
         super().input(key)
 
 
     
     def rotate_cube_without_animation(self, pairs):
         for pair in pairs:
-            [self.rotate_side_without_animation(rotate_dict[pair[0]]) for i in range(int(pair[1]))]
+            [self.rotate_side_without_animation(cube.rotate_dict[pair[0]]) for i in range(int(pair[1]))]
 
     def rotate_cube(self, pairs):
         for pair in pairs:
-            [self.rotate_side(rotate_dict[pair[0]]) for i in range(int(pair[1]))]
+            [self.rotate_side(cube.rotate_dict[pair[0]]) for i in range(int(pair[1]))]
 
 
     
