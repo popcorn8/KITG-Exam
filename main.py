@@ -20,6 +20,7 @@ class RubiksCube:
         self.reverse_rotation_dict = self.reverse_rotate_dict(self.solve_rotation_dict)
         self.count_rotation = len(self.solve_rotation_dict)
         self.current_solve_rotation_dict = self.solve_rotation_dict
+        self.yet_rotation_dict = []
 
     def print(self):
         print(self.begin_rotation_string)
@@ -75,6 +76,7 @@ class Game(Ursina):
         self.message = Text(text=(str(cube.solve_rotation_dict[0][0])+str(cube.solve_rotation_dict[0][1])), origin=(0, 19), color=color.black, scale = 2, position= (0, 1.3))
         self.solve_text = Text(text=("для сборки " + cube.solve_rotation_string), origin=(0, 19), color=color.black, scale = 1, position= (0, 0.001))
         self.current_solve_text = Text(text=("текущее " + cube.solve_rotation_string), origin=(0, 19), color=color.black, scale = 0.8, position= (0, 0.005))
+        self.yet_rot_text = Text(text=("нажато: " + str(cube.yet_rotation_dict)), origin=(0, 19), color=color.black, scale = 0.8, position= (0, 0.1))
 
     def load_game(self):
         self.create_cube_positions()
@@ -211,11 +213,13 @@ class Game(Ursina):
             elif side_name:
                 self.rotate_side(side_name)
                 # self.rotate_side_without_animation(side_name)
-            if key.upper()[len(key)-1] in cube.current_solve_rotation_dict[0][0]:
+            if cube.current_solve_rotation_dict and key.upper()[len(key)-1] in cube.current_solve_rotation_dict[0][0]:
                 if "control" in key:
                     cube.current_solve_rotation_dict[0][1] = (cube.current_solve_rotation_dict[0][1] - 3) % 4
+                    cube.yet_rotation_dict.append([key.upper()[len(key)-1], 3])
                 else:
                     cube.current_solve_rotation_dict[0][1] = cube.current_solve_rotation_dict[0][1] - 1
+                    cube.yet_rotation_dict.append([key.upper(), 1])
 
                 if cube.current_solve_rotation_dict[0][1] == 0:
                     cube.current_solve_rotation_dict.pop(0)
@@ -223,11 +227,14 @@ class Game(Ursina):
                     self.message.text = str(str(cube.current_solve_rotation_dict[0][0])+str(cube.current_solve_rotation_dict[0][1]))
                 else:
                     self.message.text = "OK"
+                self.yet_rot_text.text = "нажато: " + str(cube.yet_rotation_dict)
             else:
                 if "control" in key:
                     cube.current_solve_rotation_dict.insert(0, [key.upper()[len(key)-1], 1])
+                    cube.yet_rotation_dict.append([key.upper()[len(key)-1], 3])
                 else:
                     cube.current_solve_rotation_dict.insert(0, [key.upper(), 3])
+                    cube.yet_rotation_dict.append([key.upper(), 1])
                 self.message.text = str(str(cube.current_solve_rotation_dict[0][0])+str(cube.current_solve_rotation_dict[0][1]))
         self.current_solve_text.text = "текущее: " + str(cube.current_solve_rotation_dict)
                 
@@ -243,6 +250,22 @@ class Game(Ursina):
         #     self.random_state_animation()
 
         super().input(key)
+
+        if key == 'n':
+            pairs = cube.reverse_rotate_dict(cube.yet_rotation_dict)
+            self.rotate_cube_without_animation(pairs)
+            ####################################################################
+            cube.solve_rotation_dict = cube.string_to_dict(cube.solve_rotation_string)
+            #ПОЧЕМУ БЕЗ СТРОКИ СВЕРХУ НЕ РАБОТАЕТ
+            ###########################################################################
+            cube.current_solve_rotation_dict = cube.solve_rotation_dict
+            cube.yet_rotation_dict = []
+            print(cube.solve_rotation_string)
+            print(cube.solve_rotation_dict)
+            print(cube.current_solve_rotation_dict)
+            print(cube.yet_rotation_dict)
+            self.message.text = str(str(cube.solve_rotation_dict[0][0])+str(cube.solve_rotation_dict[0][1]))
+            self.yet_rot_text.text = "нажато: " + str(cube.yet_rotation_dict)
 
 
     
