@@ -15,12 +15,14 @@ class RubiksCube:
             'R': 'RIGHT'
         }
         self.begin_rotation_string = self.generate_cube()
+        # self.begin_rotation_string = 'UUUUURUFBLBLURDDFDLRDDFLUFRBLFDDURBFRBBFLRDLRFRFBBDLLB'
         self.solve_rotation_string = self.solve_cube(self.begin_rotation_string)
         self.solve_rotation_dict = self.string_to_dict(self.solve_rotation_string)
         self.reverse_rotation_dict = self.reverse_rotate_dict(self.solve_rotation_dict)
         self.count_rotation = len(self.solve_rotation_dict)
         self.current_solve_rotation_dict = self.solve_rotation_dict
         self.yet_rotation_dict = []
+        self.current_count_rotation = 0
 
     def print(self):
         print(self.begin_rotation_string)
@@ -33,6 +35,7 @@ class RubiksCube:
     def string_to_dict(self, rotate_string):
         elements = rotate_string.split()
         elements.pop()
+        print(elements)
         list = []
         for element in elements:
             letter, number = element[0], int(element[1:])
@@ -64,6 +67,8 @@ class Game(Ursina):
     def __init__(self):
         super().__init__()
         window.fullscreen = False
+        window.borderless = False
+        window.size = (1280, 720)
         cube_model = Entity(model='quad', scale=60, texture='white_cube', texture_scale=(60, 60), rotation_x=90, y=-5,
                color=color.light_gray)  # plane
         Entity(model='sphere', scale=100, texture='textures/sky0', double_sided=True)  # sky
@@ -76,7 +81,8 @@ class Game(Ursina):
         self.message = Text(text=(str(cube.solve_rotation_dict[0][0])+str(cube.solve_rotation_dict[0][1])), origin=(0, 19), color=color.black, scale = 2, position= (0, 1.3))
         self.solve_text = Text(text=("для сборки " + cube.solve_rotation_string), origin=(0, 19), color=color.black, scale = 1, position= (0, 0.001))
         self.current_solve_text = Text(text=("текущее " + cube.solve_rotation_string), origin=(0, 19), color=color.black, scale = 0.8, position= (0, 0.005))
-        self.yet_rot_text = Text(text=("нажато: " + str(cube.yet_rotation_dict)), origin=(0, 19), color=color.black, scale = 0.8, position= (0, 0.1))
+        self.yet_rot_text = Text(text=("нажато: " + str(cube.yet_rotation_dict)), origin=(0, 19), color=color.black, scale = 0.8, position= (0, 0.1), width=500)
+        self.current_count_rotation_text = Text(text=("сделано поворотов: " + str(cube.current_count_rotation)), origin=(0, 19), color=color.black, scale = 1, position= (0, 0.75))
 
     def load_game(self):
         self.create_cube_positions()
@@ -236,7 +242,13 @@ class Game(Ursina):
                     cube.current_solve_rotation_dict.insert(0, [key.upper(), 3])
                     cube.yet_rotation_dict.append([key.upper(), 1])
                 self.message.text = str(str(cube.current_solve_rotation_dict[0][0])+str(cube.current_solve_rotation_dict[0][1]))
-        self.current_solve_text.text = "текущее: " + str(cube.current_solve_rotation_dict)
+            if cube.current_solve_rotation_dict and cube.current_solve_rotation_dict[0][0] != cube.yet_rotation_dict[-1][0]:
+                cube.current_count_rotation += 1
+            if not cube.current_solve_rotation_dict:
+                cube.current_count_rotation += 1
+            print(cube.current_count_rotation)
+            self.current_count_rotation_text.text = ("сделано поворотов: " + str(cube.current_count_rotation))
+            self.current_solve_text.text = "текущее: " + str(cube.current_solve_rotation_dict)
                 
 
 
@@ -260,12 +272,15 @@ class Game(Ursina):
             ###########################################################################
             cube.current_solve_rotation_dict = cube.solve_rotation_dict
             cube.yet_rotation_dict = []
-            print(cube.solve_rotation_string)
-            print(cube.solve_rotation_dict)
-            print(cube.current_solve_rotation_dict)
-            print(cube.yet_rotation_dict)
+            # print(cube.solve_rotation_string)
+            # print(cube.solve_rotation_dict)
+            # print(cube.current_solve_rotation_dict)
+            # print(cube.yet_rotation_dict)
             self.message.text = str(str(cube.solve_rotation_dict[0][0])+str(cube.solve_rotation_dict[0][1]))
             self.yet_rot_text.text = "нажато: " + str(cube.yet_rotation_dict)
+            self.current_solve_text.text = "текущее " + cube.solve_rotation_string
+            cube.current_count_rotation = 0
+            self.current_count_rotation_text.text = ("сделано поворотов: " + str(cube.current_count_rotation))
 
 
     
